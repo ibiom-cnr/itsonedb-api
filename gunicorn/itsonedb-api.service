@@ -1,0 +1,16 @@
+# Copy this file to /etc/systemd/system/itsonedb-api.service
+# and adjust it following your configuration path
+
+[Unit]
+Description=Gunicorn instance to serve itsonedb api server
+After=network.target
+
+[Service]
+User=ubuntu
+Group=www-data
+WorkingDirectory=/home/ubuntu/itsonedb-api
+Environment="PATH=/home/ubuntu/itsonedb-api/.venv/bin"
+ExecStart=/home/ubuntu/itsonedb-api/.venv/bin/gunicorn --workers 2 --bind unix:/home/ubuntu/itsonedb-api/itsonedb-api.sock -m 007 wsgi:app
+
+[Install]
+WantedBy=multi-user.target
