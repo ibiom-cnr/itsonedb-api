@@ -50,12 +50,13 @@ def get_sequences(engine, connection, metadata, accession_number):
   select_its1feature = select([its1feature], and_(its1feature.c.GBentry_Accession==accession_number))
   result_its1feature = connection.execute(select_its1feature)
   for row in result_its1feature:
+    print(row)
     hasGBannotation = row[1]
-    GBstart = row[5]
-    GBend = row[6]
-    hasHMM = row[9]
-    HMMstart = row[10]
-    HMMend = row[11]
+    GBstart = row[6]
+    GBend = row[7]
+    hasHMM = row[10]
+    HMMstart = row[12]
+    HMMend = row[13]
 
   try: hasGBannotation
   except NameError: hasGBannotation = None
@@ -271,7 +272,7 @@ def itsonedb_read(action,name):
 
   #options = cli_options()
 
-  itsonedb = 'mysql://galaxy:its1wbPASS@90.147.75.12:3306/itsonedb'
+  itsonedb = 'mysql://galaxy:its1wbPASS@localhost:3306/itsonedb'
   engine, connection, metadata = db_connection(itsonedb)
   
   if action == "accession":
