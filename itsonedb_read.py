@@ -271,7 +271,7 @@ def itsonedb_read(action,name):
 
   #options = cli_options()
 
-  itsonedb = 'mysql://galaxy:its1wbPASS@90.147.75.12:3306/itsonedb'
+  itsonedb = 'mysql://galaxy:its1wbPASS@localhost:3306/itsonedb'
   engine, connection, metadata = db_connection(itsonedb)
   
   if action == "accession":
