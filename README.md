@@ -71,6 +71,7 @@ Install gunicorn systemd unit file:
 ```
 
 Setup nginx web server:
+Open the port 8080, then:
 ```
 # apt-get install nginx
 # cp nginx/itsonedb-api /etc/nginx/sites-available
