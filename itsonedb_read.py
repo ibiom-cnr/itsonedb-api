@@ -50,7 +50,6 @@ def get_sequences(engine, connection, metadata, accession_number):
   select_its1feature = select([its1feature], and_(its1feature.c.GBentry_Accession==accession_number))
   result_its1feature = connection.execute(select_its1feature)
   for row in result_its1feature:
-    print(row)
     hasGBannotation = row[1]
     GBstart = row[6]
     GBend = row[7]
