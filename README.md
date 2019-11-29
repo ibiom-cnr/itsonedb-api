@@ -52,8 +52,11 @@ Install dependencies:
 # apt-get install libmysqlclient-dev
 ```
 
-Craete python virtual environment:
+Clone this repository.
+
+Craete python virtual environment and name it .venv:
 ```
+$ cd /home/ubuntu/itsonedb-api
 $ virtualenv .venv
 $ cd .venv
 $ . .venv/bin/activate
@@ -70,7 +73,7 @@ Install gunicorn systemd unit file:
 Setup nginx web server:
 ```
 # apt-get install nginx
-# cp nginx/itsonedb-api /etc/nginx/site-available
+# cp nginx/itsonedb-api /etc/nginx/sites-available
 # ln -s /etc/nginx/sites-available/itsonedb-api /etc/nginx/sites-enabled/
 # systemctl restart nginx
 ```
