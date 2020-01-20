@@ -1,22 +1,13 @@
 #!/usr/bin/env python
 """
 """
-
+from flask import Flask, jsonify, request, make_response
 import sys, os
-#import logging
-import argparse
+import logging
 
 from sqlalchemy import *
 
 logfile = '/tmp/readdb.log'
-
-#______________________________________
-def cli_options():
-  parser = argparse.ArgumentParser(description='Read itsonedb script')
-  parser.add_argument('-a', '--entry-accession', dest='accession_number', help='Accession Number')
-  parser.add_argument('-s', '--specie-name', dest='specie_name', help='Specie name')
-  parser.add_argument('-t', '--taxon-name', dest='taxon_name', help='Taxon name')
-  return parser.parse_args()
 
 #______________________________________
 def db_connection(db):
@@ -118,47 +109,37 @@ def get_info(engine, connection, metadata, accession_number):
 #______________________________________
 def search_by_entry_accession(engine, connection, metadata, accession_number):
   
-  fout= open("output.fasta","w+")
-  mout = open("metadata.txt","w+")
-
   ena_out, ena_len, hmm_out, hmm_len = get_sequences(engine, connection, metadata, accession_number)
   version, description, length, taxon_db_xref, taxon_name, lineage, taxon_rank_name = get_info(engine, connection, metadata, accession_number)
 
-  # write metadata info
-  mout.write('Entry %s details\n\n' % accession_number)
-  mout.write('Accession: %s\n' % accession_number)
-  mout.write('Version: %s\n' % version)
-  mout.write('Description: %s\n' % description)
-  mout.write('Sequence length: %s\n' % length)
-  mout.write('Taxon name: %s\n' % taxon_name)
-  mout.write('Taxon rank: %s\n' % taxon_rank_name)
-  mout.write('Lineage: %s\n' % lineage)
-
-  # write sequence
   if ena_out is None and hmm_out is None:
-    sys.stderr.write('[ERROR] No matching neither accession nor GI')
-    sys.exit(1)
+    return make_response(jsonify(message = "[ERROR] No matching neither accession nor GI"), 400)
 
-  output=[]
+  output = {
+             'accession_number': accession_number,
+             'version': version,
+             'description': description,
+             'sequence_length': length,
+             'taxon_name': taxon_name,
+             'taxon_rank': taxon_rank_name,
+             'lineage': lineage
+           }
 
   if ena_len > 0:
-    ena_output_prefix = '>%s_ITS1_ENA|ITS1 localized by ENA annotation, %s bp length;' % (accession_number, str(ena_len))
-    ena_out.insert(0,ena_output_prefix)
-    output = ena_out
-    fill_fasta(fout,ena_out)
+    ena_localization = '>%s_ITS1_ENA|ITS1 localized by ENA annotation, %s bp length;' % (accession_number, str(ena_len))
+    output["ena_localization"] = ena_localization
+    output["ena_sequences"] = ena_out
 
   if hmm_len > 0:
     hmm_output_prefix = '>%s_ITS1_HMM|ITS1 localized by HMM profiles, %s bp length;' % (accession_number, str(hmm_len))
-    hmm_out.insert(0,hmm_output_prefix)
-    output = output + hmm_out
-    fill_fasta(fout,hmm_out)
+    output["hmm_localization"] = hmm_localization
+    output["hmm_sequences"] = hmm_out
 
-  #data=fout.read()
-  #print data
-  fout.close()
-  mout.close()
+  response = jsonify(output)
 
-  return output
+  response.status_code = 200
+
+  return response
 
 #______________________________________
 def search_by_specie_name(engine, connection, metadata, specie_name):
@@ -268,8 +249,6 @@ def fill_metadata(mout, accession, taxon_name, localization, description):
 
 #______________________________________
 def itsonedb_read(action,name):
-
-  #options = cli_options()
 
   itsonedb = 'mysql://galaxy:its1wbPASS@localhost:3306/itsonedb'
   engine, connection, metadata = db_connection(itsonedb)

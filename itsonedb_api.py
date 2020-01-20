@@ -7,7 +7,7 @@ api = Api(app)
 
 class ReadITSoneDB(Resource):
     def get(self, action, name):
-        return {'data': itsonedb_read.itsonedb_read(action, name)}
+        return itsonedb_read.itsonedb_read(action, name)
 
 api.add_resource(ReadITSoneDB, '/api/<action>/<name>')
 
