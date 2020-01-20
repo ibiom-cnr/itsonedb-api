@@ -147,6 +147,8 @@ def search_by_specie_name(engine, connection, metadata, specie_name):
   #select * from gbentry where Description LIKE "%Aspergillus flavus%";
   """
 
+  specie_name = specie_name.replace("%", " ")
+
   gbentry = Table('gbentry', metadata, autoload=True, autoload_with=engine)
 
   select_gbentry = select([gbentry], and_(gbentry.c.Description.like("%"+specie_name+"%")))
@@ -156,14 +158,9 @@ def search_by_specie_name(engine, connection, metadata, specie_name):
     accession_list.append(row[0])
 
   if not accession_list:
-    sys.stderr.write('[ERROR] No matching species')
-    sys.exit(1)
+    return make_response(jsonify(message = "[ERROR] No matching species"), 400)
 
-  # Fill fasta files
-  fout = open("output.fasta","w+")
-  mout = open("metadata.txt","w+")
-  # write table header
-  mout.write('Accession\t\t\tTaxon name\t\t\tITS1 localization\t\t\tSequence description\n')
+  output = {}
 
   for i in accession_list:
     # get sequences
@@ -172,24 +169,34 @@ def search_by_specie_name(engine, connection, metadata, specie_name):
     # get info
     version, description, length, taxon_db_xref, taxon_name, lineage, taxon_rank_name = get_info(engine, connection, metadata, str(i))
 
-    if ena_len > 0:
-      ena_output_prefix = '>%s_ITS1_ENA|%s|%s|ITS1 located by ENA annotation, %s bp' % (str(i), str(taxon_name), str(taxon_db_xref), str(ena_len))
-      ena_out.insert(0,ena_output_prefix)
-      fill_fasta(fout,ena_out)
-      fill_metadata(mout, str(i), str(taxon_name), 'ENA', str(description))
+    if ena_out is None and hmm_out is None:
+      return make_response(jsonify(message = "[ERROR] No matching neither accession nor GI"), 400)
 
+    output[i] = {
+                  'taxon_name': taxon_name,
+                  'ENA': '0',
+                  'HMM': '0',
+                  'description': description,
+                }
+
+    if ena_len > 0:
+      
+      output[i]['ENA'] = '1'
 
     if hmm_len > 0:
-      hmm_output_prefix = '>%s_ITS1_HMM|%s|%s|ITS1 located by HMM profiles, %s bp' % (str(i), str(taxon_name), str(taxon_db_xref), str(hmm_len))
-      hmm_out.insert(0,hmm_output_prefix)
-      fill_fasta(fout,hmm_out)
-      fill_metadata(mout, str(i), str(taxon_name), 'HMM', str(description))
 
-  fout.close()
-  mout.close()
+      output[i]['HMM'] = '1'
+
+  response = jsonify(output)
+
+  response.status_code = 200
+
+  return response
 
 #______________________________________
 def search_by_taxon_name(engine, connection, metadata, taxon_name):
+
+  taxon_fungi = taxon_name.replace("%", " ")
 
   taxon_fungi = Table('taxon_fungi', metadata, autoload=True, autoload_with=engine)
   gbentry = Table('gbentry', metadata, autoload=True, autoload_with=engine)
@@ -204,11 +211,10 @@ def search_by_taxon_name(engine, connection, metadata, taxon_name):
     for row in result_gbentry:
       accession_list.append(row[0])
 
-  # Fill fasta files
-  fout = open("output.fasta","w+")
-  mout = open("metadata.txt","w+")
-  # write table header
-  mout.write('Accession\t\t\tTaxon name\t\t\tITS1 localization\t\t\tSequence description\n')
+  if not accession_list:
+    return make_response(jsonify(message = "[ERROR] No matching species"), 400)
+
+  output = {}
 
   for i in accession_list:
     # get sequences
@@ -217,21 +223,30 @@ def search_by_taxon_name(engine, connection, metadata, taxon_name):
     # get info
     version, description, length, taxon_db_xref, taxon_name, lineage, taxon_rank_name = get_info(engine, connection, metadata, str(i))
 
-    if ena_len > 0:
-      ena_output_prefix = '>%s_ITS1_ENA|%s|%s|ITS1 located by ENA annotation, %s bp' % (str(i), str(taxon_name), str(taxon_db_xref), str(ena_len))
-      ena_out.insert(0,ena_output_prefix)
-      fill_fasta(fout,ena_out)
-      fill_metadata(mout, str(i), str(taxon_name), 'ENA', str(description))
+    if ena_out is None and hmm_out is None:
+      return make_response(jsonify(message = "[ERROR] No matching neither accession nor GI"), 400)
 
+    output[i] = {
+                  'taxon_name': taxon_name,
+                  'ENA': '0',
+                  'HMM': '0',
+                  'description': description,
+                }
+
+    if ena_len > 0:
+
+      output[i]['ENA'] = '1'
 
     if hmm_len > 0:
-      hmm_output_prefix = '>%s_ITS1_HMM|%s|%s|ITS1 located by HMM profiles, %s bp' % (str(i), str(taxon_name), str(taxon_db_xref), str(hmm_len))
-      hmm_out.insert(0,hmm_output_prefix)
-      fill_fasta(fout,hmm_out)
-      fill_metadata(mout, str(i), str(taxon_name), 'HMM', str(description))
 
-  fout.close()
-  mout.close()
+      output[i]['HMM'] = '1'
+
+
+  response = jsonify(output)
+
+  response.status_code = 200
+
+  return response
 
 #______________________________________
 def fill_fasta(fout, aout):
@@ -257,9 +272,10 @@ def itsonedb_read(action,name):
     seqs = search_by_entry_accession(engine, connection, metadata, name)
     return seqs
 
-  #if action == "specie":
-  #  seqs = search_by_specie_name(engine, connection, metadata, options.specie_name)
-  #  return seqs
+  if action == "specie":
+    accessions = search_by_specie_name(engine, connection, metadata, name)
+    return accessions
 
-  #if action == "taxon":
-  #  search_by_taxon_name(engine, connection, metadata, options.taxon_name)
+  if action == "taxon":
+    accessions = search_by_taxon_name(engine, connection, metadata, name)
+    return accessions
