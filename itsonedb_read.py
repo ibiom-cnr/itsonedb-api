@@ -3,11 +3,12 @@
 """
 from flask import Flask, jsonify, request, make_response
 import sys, os
-import logging
 
 from sqlalchemy import *
 
-logfile = '/tmp/readdb.log'
+#import logging
+#logging.basicConfig(filename='/tmp/readdb.log', filemode='w', format='%(name)s - %(levelname)s - %(message)s', level=logging.DEBUG)
+#logging.info('start logging')
 
 #______________________________________
 def db_connection(db):
@@ -147,7 +148,7 @@ def search_by_specie_name(engine, connection, metadata, specie_name):
   #select * from gbentry where Description LIKE "%Aspergillus flavus%";
   """
 
-  specie_name = specie_name.replace("%", " ")
+  specie_name = specie_name.replace("&", " ")
 
   gbentry = Table('gbentry', metadata, autoload=True, autoload_with=engine)
 
@@ -196,7 +197,7 @@ def search_by_specie_name(engine, connection, metadata, specie_name):
 #______________________________________
 def search_by_taxon_name(engine, connection, metadata, taxon_name):
 
-  taxon_fungi = taxon_name.replace("%", " ")
+  taxon_name = taxon_name.replace("&", " ")
 
   taxon_fungi = Table('taxon_fungi', metadata, autoload=True, autoload_with=engine)
   gbentry = Table('gbentry', metadata, autoload=True, autoload_with=engine)
@@ -205,14 +206,15 @@ def search_by_taxon_name(engine, connection, metadata, taxon_name):
   result_taxon_fungi = connection.execute(select_taxon_fungi)
   accession_list = []
   for row in result_taxon_fungi:
-
     select_gbentry = select([gbentry], and_(gbentry.c.Taxon_db_xref==row[0]))
     result_gbentry = connection.execute(select_gbentry)
+    print result_gbentry
     for row in result_gbentry:
       accession_list.append(row[0])
 
   if not accession_list:
-    return make_response(jsonify(message = "[ERROR] No matching species"), 400)
+    return make_response(jsonify(message = "[ERROR] No matching taxon"), 400)
+
 
   output = {}
 
@@ -267,7 +269,7 @@ def itsonedb_read(action,name):
 
   itsonedb = 'mysql://galaxy:its1wbPASS@localhost:3306/itsonedb'
   engine, connection, metadata = db_connection(itsonedb)
-  
+
   if action == "accession":
     seqs = search_by_entry_accession(engine, connection, metadata, name)
     return seqs
