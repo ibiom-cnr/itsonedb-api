@@ -3,7 +3,7 @@
 """
 from flask import Flask, jsonify, request, make_response
 import sys, os
-
+import json
 from sqlalchemy import *
 
 #import logging
@@ -23,6 +23,23 @@ def db_connection(db):
   metadata = MetaData()
 
   return engine, connection, metadata
+
+#______________________________________
+def get_all_accessions(engine, connection, metadata):
+  """
+  Get all accession numbers from ITSOneDB
+  """
+
+  # Get sequence from Accession number
+  gbentry_sequence = Table('gbentry_sequence', metadata, autoload=True, autoload_with=engine)
+  select_gbentry_sequence = select([gbentry_sequence.c.gbentryAccession])
+  result_gbentry_sequence = connection.execute(select_gbentry_sequence)
+
+  all_accessions = []
+  for row in result_gbentry_sequence:
+    all_accessions.append(row[0])
+
+  return jsonify(all_accessions)
 
 #______________________________________
 def get_sequences(engine, connection, metadata, accession_number):
@@ -250,19 +267,6 @@ def search_by_taxon_name(engine, connection, metadata, taxon_name):
 
   return response
 
-#______________________________________
-def fill_fasta(fout, aout):
-  """
-  Fill fasta output files
-  """
-  for i in aout:
-    fout.write("%s\n" % i)
-
-def fill_metadata(mout, accession, taxon_name, localization, description):
-  """
-  Fill metadata output file
-  """
-  mout.write('%s\t\t\t%s\t\t\t%s\t\t\t%si\n' % (accession, taxon_name, localization, description))
 
 #______________________________________
 def itsonedb_read(action,name):
@@ -271,8 +275,11 @@ def itsonedb_read(action,name):
   engine, connection, metadata = db_connection(itsonedb)
 
   if action == "accession":
-    seqs = search_by_entry_accession(engine, connection, metadata, name)
-    return seqs
+    if name == "all":
+      return get_all_accessions(engine, connection, metadata)
+    else:
+      seqs = search_by_entry_accession(engine, connection, metadata, name)
+      return seqs
 
   if action == "specie":
     accessions = search_by_specie_name(engine, connection, metadata, name)
